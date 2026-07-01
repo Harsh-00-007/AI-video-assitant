@@ -1,6 +1,7 @@
 import whisper
 import os
 import requests
+import time
 from pydub import AudioSegment
 
 # Sarvam's sync STT-translate API rejects audio longer than 30s.
@@ -64,6 +65,7 @@ def transcribe_chunk_sarvam(chunk_path: str) -> str:
     """
     Sarvam sync API only accepts ≤30s audio. We split this chunk into
     25-second pieces, send each separately, and join the transcripts.
+    Includes exponential backoff for unstable API connections.
     """
     if not SARVAM_API_KEY:
         raise RuntimeError("SARVAM_API_KEY is not set in environment / .env")
@@ -81,13 +83,32 @@ def transcribe_chunk_sarvam(chunk_path: str) -> str:
 
         try:
             print(f"  → Sarvam piece {i + 1}/{total_pieces} ...")
-            full_text += _send_to_sarvam(piece_path) + " "
+            
+            # --- START OF RETRY LOGIC ---
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # Attempt to send to API
+                    full_text += _send_to_sarvam(piece_path) + " "
+                    time.sleep(1)  # Success! Rest for 1s to avoid rate limiting
+                    break          # Break out of the retry loop, move to next piece
+                    
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        sleep_time = 2 ** attempt  # Wait 1s, then 2s
+                        print(f"    ⚠️ Connection dropped. Retrying in {sleep_time}s...")
+                        time.sleep(sleep_time)
+                    else:
+                        print("    ❌ Failed after 3 attempts.")
+                        raise e # Crash if it fails 3 times in a row
+            # --- END OF RETRY LOGIC ---
+
         finally:
+            # This cleanup always runs, whether the API succeeded or failed
             if os.path.exists(piece_path):
                 os.remove(piece_path)
 
     return full_text.strip()
-
    
 
 

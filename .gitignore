@@ -1,4 +1,14 @@
+# Environments
 .venv/
+env/
+
+# Secrets
 .env
+
+# Media and Data
+downloades/
+vector_db/
+
+# Python Cache
 __pycache__/
 *.pyc

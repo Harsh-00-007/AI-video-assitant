@@ -6,7 +6,7 @@ DOWNLOAD_DIR = 'downloades'
 os.makedirs(DOWNLOAD_DIR,exist_ok = True)
 
 def download_youtube_audio(url :str) ->str:
-    output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+    output_path = os.path.join(DOWNLOAD_DIR, "%(id)s.%(ext)s")
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": output_path,
@@ -21,8 +21,14 @@ def download_youtube_audio(url :str) ->str:
         "quiet": True,
         "no_warnings": True,
     }
-    if os.path.exists("cookies.txt"):
-        ydl_opts['cookiefile'] = 'cookies.txt'
+   # Force the absolute path to where Colab stores your project files
+    cookie_path = "/content/AI-video-assitant/cookies.txt"
+    
+    if os.path.exists(cookie_path):
+        ydl_opts['cookiefile'] = cookie_path
+        print("✅ SUCCESS: cookies.txt found and loaded!")
+    else:
+        print("❌ WARNING: cookies.txt NOT found at", cookie_path)
         
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)

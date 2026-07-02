@@ -10,6 +10,7 @@ def download_youtube_audio(url :str) ->str:
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": output_path,
+        'cookiefile': 'cookies.txt',
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -18,11 +19,19 @@ def download_youtube_audio(url :str) ->str:
             }
         ],
         "quiet": True,
+        "no_warnings": True,
     }
+    if os.path.exists("cookies.txt"):
+        ydl_opts['cookiefile'] = 'cookies.txt'
+        
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
-    return filename
+        raw_filename = ydl.prepare_filename(info)
+        
+        # 3. Robustly swap ANY original extension to .wav
+        final_filename = os.path.splitext(raw_filename)[0] + ".wav"
+        
+    return final_filename
 
 
 

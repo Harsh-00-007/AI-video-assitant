@@ -2,6 +2,7 @@ import whisper
 import os
 import requests
 import time
+import torch
 from pydub import AudioSegment
 
 # Sarvam's sync STT-translate API rejects audio longer than 30s.
@@ -20,14 +21,17 @@ _model = None
 
 
 def load_model():
-
     global _model  
 
     if _model is None: 
-        print(f"Loading Whisper model: {WHISPER_MODEL} ...")
-        _model = whisper.load_model(WHISPER_MODEL) 
+        # Detect if we have a GPU (CUDA) or if we are stuck on CPU
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Loading Whisper model: {WHISPER_MODEL} on {device} ...")
+        
+        # Pass the device parameter to Whisper
+        _model = whisper.load_model(WHISPER_MODEL, device=device) 
         print("Whisper model loaded.")
-    return _model 
+    return _model
 
 
 def transcribe_chunk_whisper(chunk_path: str) -> str:
@@ -116,29 +120,30 @@ def transcribe_chunk_sarvam(chunk_path: str) -> str:
 def transcribe_chunk(chunk_path: str, language: str = "english") -> str:
     """
     Route one chunk to Whisper or Sarvam depending on language choice.
-    - english  → Whisper (local model)
-    - hinglish → Sarvam (translates to English while transcribing)
+    Falls back to local Whisper if no Sarvam API key is provided.
     """
-    if language.lower() == "hinglish":
+    # Only use Sarvam if Hinglish is selected AND an API key exists
+    if language.lower() == "hinglish" and SARVAM_API_KEY:
         return transcribe_chunk_sarvam(chunk_path)
+        
+    if language.lower() == "hinglish" and not SARVAM_API_KEY:
+        print("⚠️ No Sarvam API key detected. Falling back to local GPU Whisper.")
+        
+    # Default to high-speed local GPU
     return transcribe_chunk_whisper(chunk_path)
 
 
 def transcribe_all(chunks: list, language: str = "english") -> str:
-
     full_transcript = "" 
 
-    engine = "Sarvam AI" if language.lower() == "hinglish" else "Whisper"
+    # Accurately report which engine is being used
+    engine = "Sarvam AI" if (language.lower() == "hinglish" and SARVAM_API_KEY) else "Local Whisper"
     print(f"Using {engine} for transcription.")
 
     for i, chunk in enumerate(chunks):  
-
         print(f"Transcribing chunk {i + 1}/{len(chunks)}...")
-
         text = transcribe_chunk(chunk, language=language)  
-
         full_transcript += text + " "  
 
     print("Transcription complete.")
-
-    return full_transcript.strip()  
+    return full_transcript.strip()

@@ -1,5 +1,10 @@
 # AI Video & Meeting Assistant
+# 🎙️ AI Video & Meeting Assistant
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Harsh-00-007/AI-video-assitant/blob/main/deployment.ipynb)
+An intelligent, GPU-accelerated pipeline that transforms long-form YouTube videos and local meeting recordings into structured, actionable intelligence. 
+
+This system handles automated media extraction, audio chunking, local speech-to-text transcription
 ## 📌 Overview
 An intelligent, terminal-based pipeline that transforms long-form YouTube videos and local meeting recordings into structured, actionable intelligence. 
 
